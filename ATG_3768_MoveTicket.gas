@@ -1,0 +1,224 @@
+Program.Sub.ScreenSU.Start
+gui.SS_Form1..create
+gui.SS_Form1..caption("Material Move Ticket")
+gui.SS_Form1..size(2595,1825)
+gui.SS_Form1..position(0,0)
+gui.SS_Form1..event(unload,ss_form1_unload)
+gui.SS_Form1..alwaysontop(False)
+gui.SS_Form1..fontname("Arial")
+gui.SS_Form1..fontsize(8)
+gui.SS_Form1..forecolor(0)
+gui.SS_Form1..fontstyle(,,,,)
+gui.SS_Form1..BackColor(-2147483633)
+gui.SS_Form1..controlbox(True)
+gui.SS_Form1..maxbutton(False)
+gui.SS_Form1..minbutton(False)
+gui.SS_Form1..mousepointer(0)
+gui.SS_Form1..moveable(True)
+gui.SS_Form1..sizeable(False)
+gui.SS_Form1..ShowInTaskBar(True)
+gui.SS_Form1..titlebar(True)
+gui.SS_Form1.lbl_dtpStart.create(label,"Date",True,1800,200,1,100,135,True,0,Arial,8,-2147483633,0)
+gui.SS_Form1.dtpStart.create(datepicker)
+gui.SS_Form1.dtpStart.visible(True)
+gui.SS_Form1.dtpStart.size(1800,345)
+gui.SS_Form1.dtpStart.zorder(0)
+gui.SS_Form1.dtpStart.position(100,335)
+gui.SS_Form1.dtpStart.enabled(True)
+gui.SS_Form1.dtpStart.checkbox(False)
+gui.SS_Form1.cmdProcess.create(button)
+gui.SS_Form1.cmdProcess.caption("Process")
+gui.SS_Form1.cmdProcess.visible(True)
+gui.SS_Form1.cmdProcess.size(1000,360)
+gui.SS_Form1.cmdProcess.zorder(0)
+gui.SS_Form1.cmdProcess.position(100,850)
+gui.SS_Form1.cmdProcess.enabled(True)
+gui.SS_Form1.cmdProcess.fontname("Arial")
+gui.SS_Form1.cmdProcess.fontsize(8)
+gui.SS_Form1.cmdProcess.event(click,cmdprocess_click)
+
+
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Coded by: JND
+'Project Start Date: 6/15/2011
+'Notes:
+'  Quote 2514
+' Hook 15760 or custom hook from menu
+V.Local.iQty.Declare(Long)
+V.Local.sCol.Declare(String)
+V.Local.sColW.Declare(String)
+V.Local.sRet.Declare(String)
+
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+F.Intrinsic.Control.If(V.Caller.Hook,<,100000)
+	F.Intrinsic.String.Split("Job*!*Suffix*!*Part*!*Description","*!*",V.Local.sCol)
+	F.Intrinsic.String.split("1000*!*600*!*3000*!*3000","*!*",V.Local.sColW)
+	F.Intrinsic.UI.Browser("Select a work order","conx","select JOB, SUFFIX, PART, DESCRIPTION from JOB_HEADER ORDER BY JOB, SUFFIX",V.Local.sCol,V.Local.sColW,V.Local.sret)
+	F.Intrinsic.Control.If(V.Local.sRet,"<>","***CANCEL***")
+		F.Intrinsic.String.Split(V.Local.sRet,"*!*",V.local.sret)
+		F.Intrinsic.UI.inputbox("Please enter quantity to print","Move Ticket",1,V.Local.iQty)
+		F.Intrinsic.Control.CallSub(Printlabel,"count",V.Local.iqty,"Tool",V.Local.sRet(2),"wo",V.Local.sRet(0))
+	F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.Else
+	Gui.SS_Form1..Show
+F.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+Program.Sub.Printlabel.Start
+V.Local.bret.declare(Boolean)
+V.Local.stemp.Declare(String)
+F.Intrinsic.Printer.SetCopyCount(V.Args.count)
+'F.Intrinsic.Printer.SelectPrinterByNameExact("CutePDF Writer",V.Local.bret)
+F.Intrinsic.Printer.SelectPrinterByNameFragment("zebra",V.Local.bret)
+F.Intrinsic.Control.If(V.Local.bret,=,True)
+
+	F.Intrinsic.Printer.SetFont("Courier New",10)
+	F.Intrinsic.Printer.PrintRet("MATERIAL MOVE/INSPECTION")
+	F.Intrinsic.String.Concat("    WO#   ",V.Args.WO,V.Local.stemp)
+	F.Intrinsic.Printer.PrintRet(V.Local.stemp)
+	F.Intrinsic.String.Concat("    Tool#   ",V.Args.tool,V.Local.stemp)
+	F.Intrinsic.Printer.PrintRet(V.Local.stemp)
+	F.Intrinsic.Printer.PrintRet("    PACK__________________________")
+	F.Intrinsic.Printer.PrintRet("    QTY____________ SCRAP_________")
+	F.Intrinsic.Printer.PrintRet("    DATE____________ R.W._________")
+	F.Intrinsic.Printer.PrintRet("    LOT# __________ INSP._________")
+	F.Intrinsic.Printer.SetFont("C39HrP24DlTt",19)
+	F.Intrinsic.String.Concat("       !",V.Args.WO,,"!",V.Local.stemp)
+	F.Intrinsic.Printer.PrintRet(V.Local.stemp)
+	F.Intrinsic.Printer.PrintRet("")
+	F.Intrinsic.String.Concat("      !",V.Args.tool,"!",V.Local.stemp)
+	F.Intrinsic.Printer.PrintRet(V.Local.stemp)
+	F.Intrinsic.Printer.Finished
+F.Intrinsic.Control.Else
+	F.Intrinsic.UI.Msgbox("Zebra Printer not found")
+	
+F.Intrinsic.Control.EndIf
+
+Program.Sub.Printlabel.End
+
+program.sub.cmdprocess_click.start
+V.Local.squery.Declare(String)
+V.Local.sdate.Declare(String)
+V.Local.sVal.Declare(String)
+V.Local.bproc.Declare(Boolean)
+V.Local.bPL.Declare(Boolean)
+
+V.Local.iQty.Declare(Long)
+
+
+F.Intrinsic.String.Format(V.Screen.SS_Form1!dtpStart.Value,"MMDDYY",V.Local.sdate)
+F.Intrinsic.String.Concat("SELECT JOB, PRODUCT_LINE,QTY_ORDER, ROUTER FROM JOB_HEADER WHERE DATE_OPENED = ",V.Local.sdate,V.Local.squery)
+F.ODBC.Connection!conx.OpenRecordsetRO("rstJ",V.Local.squery)
+F.Intrinsic.Control.dountil(V.ODBC.conx!rstj.eof,=,True)
+	V.Local.bproc.Set(False)
+	F.Intrinsic.string.Mid(V.ODBC.conx!rstJ.FieldVal!ROUTER,3,1,V.Local.sVal)
+	F.Intrinsic.Control.If(V.Local.sval.IsNumeric,=,False)
+		'Test for outside
+		F.Intrinsic.Control.CallSub(Hasoutside,"router",V.ODBC.conx!rstJ.FieldValTrim!ROUTER)
+		F.Intrinsic.Control.If(V.Args.bret,=,True)
+			V.Local.bproc.Set(True)
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.Else
+		F.Intrinsic.string.Mid(V.ODBC.conx!rstJ.FieldVal!ROUTER,9,1,V.Local.sVal)
+		F.Intrinsic.Control.If(V.Local.sval.IsNumeric,=,False)
+			F.Intrinsic.Control.If(V.Local.sVal,<>,"C")
+				'test for outside
+				F.Intrinsic.Control.CallSub(Hasoutside,"router",V.ODBC.conx!rstJ.FieldValTrim!ROUTER)
+				F.Intrinsic.Control.If(V.Args.bret,=,True)
+						V.Local.bproc.Set(True)
+					F.Intrinsic.Control.EndIf
+			F.Intrinsic.Control.EndIf
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.EndIf
+	F.Intrinsic.string.Mid(V.ODBC.conx!rstJ.FieldVal!PRODUCT_LINE,1,1,V.Local.sVal)
+	V.Local.bPL.Set(False)
+	F.Intrinsic.Control.If(V.Local.sVal,=,"B")
+		V.Local.bPL.Set(True)
+	F.Intrinsic.Control.endif
+	F.Intrinsic.Control.If(V.local.sVal,=,"E")
+		V.Local.bPL.Set(True)
+	F.Intrinsic.Control.EndIf
+
+	F.Intrinsic.Control.If(V.Local.bPL,=,True)
+		F.Intrinsic.string.Mid(V.ODBC.conx!rstJ.FieldVal!PRODUCT_LINE,2,1,V.Local.sVal)
+		F.Intrinsic.Control.If(V.Local.sVal.IsNumeric,=,True)
+			F.Intrinsic.Control.If(V.Local.sVal,>=,0)
+			F.Intrinsic.Control.AndIf(V.Local.sVal,<=,9)
+				F.Intrinsic.String.Concat("SELECT PRIM_DIM FROM INVENTORY_MSTR WHERE PART = '",V.ODBC.conx!rstJ.FieldValTrim!router,"'",V.Local.squery)
+				F.odbc.Connection!conx.OpenRecordsetRO("rstQty",V.local.squery)
+				F.Intrinsic.Control.If(V.ODBC.conx!rstQty.EOF,=,True)
+					F.Intrinsic.Control.If(V.ODBC.conx!rstQty.FieldValfloat!PRIM_DIM,<,5)
+						F.Intrinsic.Math.Div(V.ODBC.conx!rstJ.FieldVallong!QTY_ORDER,100,V.Local.iQty)
+
+					F.Intrinsic.Control.Else
+						F.Intrinsic.Math.Div(V.ODBC.conx!rstJ.FieldVallong!QTY_ORDER,25,V.Local.iQty)
+
+					F.Intrinsic.Control.EndIf
+				F.Intrinsic.Control.EndIf
+				F.ODBC.conx!rstQty.Close
+		
+			F.Intrinsic.Control.EndIf
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.Else
+		F.Intrinsic.Math.Div(V.ODBC.conx!rstJ.FieldVallong!QTY_ORDER,100,V.Local.iQty)
+	F.Intrinsic.control.EndIf
+
+	F.Intrinsic.Control.If(V.Local.iQty,<,0)
+		V.Local.iQty.Set(1)
+	F.Intrinsic.Control.EndIf
+	
+	F.Intrinsic.Control.If(V.Local.bProc,=,True)
+		F.Intrinsic.Control.CallSub(Printlabel,"count",V.Local.iqty,"Tool",V.odbc.conx!rstJ.FieldValTrim!router,"wo",V.odbc.conx!rstJ.FieldValTrim!JOB)
+	F.Intrinsic.Control.EndIf
+
+	F.odbc.conx!rstj.movenext
+F.Intrinsic.Control.Loop
+F.ODBC.conx!rstJ.Close
+F.Intrinsic.control.End
+
+program.sub.cmdprocess_click.end
+
+program.sub.ss_form1_unload.start
+F.Intrinsic.Control.End
+
+program.sub.ss_form1_unload.end
+
+Program.Sub.HasOutside.Start
+
+V.Local.squery.Declare(String)
+F.Intrinsic.Variable.AddRV("bRet",False)
+F.Intrinsic.String.Concat("select LMO from ROUTER_LINE WHERE ROUTER_TYPE = 'L' AND LMO = 'O' AND ROUTER = '",V.Args.Router,"'",V.Local.squery)
+
+F.ODBC.Connection!conx.OpenRecordsetRO("rstR",V.Local.squery)
+
+F.Intrinsic.Control.If(V.ODBC.conx!rstR.EOF,=,False)
+	F.Intrinsic.Variable.AddRV("bRet",True)
+F.Intrinsic.Control.EndIf
+
+F.ODBC.conx!rstR.Close
+
+Program.Sub.HasOutside.End
+
+Program.Sub.ScreenSS.Start
+SS_Form1{{CAPTION::Material Move Ticket
+SS_Form1.CTRL{{NAME::dtpStart\\TYPE::6\\CAPTION::Start Date\\GROUP::1\\BROWSER::0
+SS_Form1.CTRL{{NAME::dtpEnd\\TYPE::6\\CAPTION::End Date\\GROUP::1\\BROWSER::0
+SS_Form1.CTRL{{NAME::cmdProcess\\TYPE::5\\CAPTION::Process\\GROUP::-1\\BROWSER::0
+
+Program.Sub.ScreenSS.End
+Program.Sub.Comments.Start
+${$0$}$ATG_3768_MoveTicket$}$JCT$}$4/11/2016
+${$1$}$$}$$}$0$}$15760$}$OLS001-PB-SCRIPT-1-HOOK (On-line GUI)$}$4/11/2016 9:55:25 AM$}$(Program: OLG002; Screen: OLS001)
+
+Program.Sub.Comments.End
+
